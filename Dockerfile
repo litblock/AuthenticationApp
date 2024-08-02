@@ -1,4 +1,4 @@
-FROM        python:3.10
+FROM        python:3.10-alpine
 
 ENV         PYTHONUNBUFFERED=1
 
@@ -9,7 +9,9 @@ COPY        ./requirements.txt .
 COPY        * .
 
 RUN         pip install -r requirements.txt \
-            && adduser --disabled-password --no-create-home doe
+            && adduser --disabled-password --no-create-home doe \
+RUN npm install
+RUN npm install -g nodemon
 
 USER        doe
 
