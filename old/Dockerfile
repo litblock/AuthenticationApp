@@ -4,7 +4,7 @@ ENV         PYTHONUNBUFFERED=1
 
 WORKDIR     /home
 
-COPY        ./requirements.txt .
+COPY        ../requirements.txt .
 
 COPY        * .
 

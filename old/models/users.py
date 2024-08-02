@@ -10,7 +10,7 @@ from sqlalchemy import (
     func
 )
 
-from db_initializer import Base
+from old.db_initializer import Base
 
 
 class User(Base):
