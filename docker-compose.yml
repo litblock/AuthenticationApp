@@ -1,20 +1,20 @@
-version: "3.10"
+version: "3.9"
 
 services:
   db:
     image: postgres:12-alpine
-    container_name: authenticationapp_db
+    container_name: authenticationapp_postgres
     restart: always
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     networks:
       - authenticationappnetwork
 
   app:
     image: authenticationapp
-    container_name: authenticationapp_demoapp
+    container_name: authenticationapp_fastapi
     ports:
       - 8000:8000
     volumes:
@@ -23,12 +23,6 @@ services:
       - db
     networks:
       - authenticationappnetwork
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_HOST: ${POSTGRES_HOST}
-      POSTGRES_PORT: ${POSTGRES_PORT}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
 networks:
   authenticationappnetwork:

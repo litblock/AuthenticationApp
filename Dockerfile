@@ -9,9 +9,7 @@ COPY        ./requirements.txt .
 COPY        * .
 
 RUN         pip install -r requirements.txt \
-            && adduser --disabled-password --no-create-home doe \
-RUN npm install
-RUN npm install -g nodemon
+            && adduser --disabled-password --no-create-home doe
 
 USER        doe
 
