@@ -1,5 +1,7 @@
+import uuid
 from contextlib import asynccontextmanager
 
+from sqlalchemy import Uuid
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from fastapi import HTTPException, FastAPI
 
@@ -11,6 +13,7 @@ import database
 import schemas
 from database import SessionLocal, engine, Base
 from settings import KEY
+from typing import Union
 
 
 @asynccontextmanager
@@ -53,3 +56,18 @@ async def create(user: schemas.UserCreate, db: Session = fastapi.Depends(get_db)
         raise HTTPException(status_code=500, detail="Database error")
 
 
+@app.get("/users/{identifier}", response_model=schemas.UserOut)
+async def get_user(identifier: Union[uuid.UUID, str], db: Session = fastapi.Depends(get_db)):
+    if isinstance(identifier, uuid.UUID):
+        db_user = crud.get_user_by_id(db, id=identifier)
+    else:
+        db_user = crud.get_user_by_username(db, username=identifier)
+
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_user
+
+
+@app.get("/login")
+async def login(user: schemas.UserLogin, db: Session = fastapi.Depends(get_db)):
+    return {"message": "Login page"}
