@@ -1,24 +1,16 @@
 from contextlib import asynccontextmanager
 
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from fastapi import HTTPException, FastAPI
 
 from sqlalchemy.orm import Session
 import fastapi
-from passlib.context import CryptContext
 
 import crud
 import database
+import schemas
 from database import SessionLocal, engine, Base
 from settings import KEY
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @asynccontextmanager
@@ -29,7 +21,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 # SECRET_KEY = KEY
@@ -42,14 +40,16 @@ async def root():
     return {"message": "Hello World"}
 
 
-@app.post("/signup/", status_code=201)
-async def create(user: database.UserCreate, db: Session = fastapi.Depends(get_db)):
-    return
+@app.post("/signup/", status_code=201, response_model=schemas.UserOut)
+async def create(user: schemas.UserCreate, db: Session = fastapi.Depends(get_db)):
+    try:
+        db_user = crud.get_user_by_email(db, email=user.email)
+        if db_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        return crud.create_user(db, user)
+    except SQLAlchemyError as e:
+        db.rollback()
+        print(e)
+        raise HTTPException(status_code=500, detail="Database error")
 
 
-def isValidUsername(db: Session, username: str):
-    if len(username) < 3:
-        return False
-    elif crud.get_user_by_username(db, username) is not None:
-        return False
-    return True
