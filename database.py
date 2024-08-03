@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, func
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 from settings import POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_PORT, POSTGRES_DB
@@ -21,6 +21,10 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
+    date_created = Column(DateTime, default=func.now())
 
 
-Base.metadata.create_all(engine)
+class UserCreate(Base):
+    username: str
+    email: str
+    password: str
