@@ -1,13 +1,17 @@
 import uuid
 from contextlib import asynccontextmanager
+from urllib.request import Request
 
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy import Uuid
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from fastapi import HTTPException, FastAPI
 
 from sqlalchemy.orm import Session
 import fastapi
+from starlette.responses import JSONResponse
 
+import auth
 import crud
 import database
 import schemas
@@ -33,9 +37,21 @@ def get_db():
         db.close()
 
 
-# SECRET_KEY = KEY
-# ALGORITHM = "HS256"
-# ACCESS_TOKEN_EXPIRE_MINUTES = 30
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = []
+    for error in exc.errors():
+        errors.append({
+            "loc": error["loc"],
+            "msg": error["msg"],
+            "type": error["type"]
+        })
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": errors
+        }
+    )
 
 
 @app.get("/")
@@ -46,9 +62,6 @@ async def root():
 @app.post("/signup/", status_code=201, response_model=schemas.UserOut)
 async def create(user: schemas.UserCreate, db: Session = fastapi.Depends(get_db)):
     try:
-        db_user = crud.get_user_by_email(db, email=user.email)
-        if db_user:
-            raise HTTPException(status_code=400, detail="Email already registered")
         return crud.create_user(db, user)
     except SQLAlchemyError as e:
         db.rollback()
@@ -56,7 +69,7 @@ async def create(user: schemas.UserCreate, db: Session = fastapi.Depends(get_db)
         raise HTTPException(status_code=500, detail="Database error")
 
 
-@app.get("/users/{identifier}", response_model=schemas.UserOut)
+@app.post("/users/{identifier}", response_model=schemas.UserOut)
 async def get_user(identifier: Union[uuid.UUID, str], db: Session = fastapi.Depends(get_db)):
     if isinstance(identifier, uuid.UUID):
         db_user = crud.get_user_by_id(db, id=identifier)
@@ -68,6 +81,15 @@ async def get_user(identifier: Union[uuid.UUID, str], db: Session = fastapi.Depe
     return db_user
 
 
-@app.get("/login")
+@app.post("/login")
 async def login(user: schemas.UserLogin, db: Session = fastapi.Depends(get_db)):
-    return {"message": "Login page"}
+    user = auth.authenticate_user(db, email=user.email, password=user.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = auth.create_access_token(data={"sub": user.email})
+    return "Success", schemas.UserLoginSuccess(username=user.username, email=user.email, access_token=token)
+
+
+@app.get("/users/me")
+async def me():
+    return "signed in"
