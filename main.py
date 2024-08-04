@@ -3,14 +3,16 @@ from contextlib import asynccontextmanager
 from urllib.request import Request
 
 from fastapi.exceptions import RequestValidationError
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import Uuid
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from fastapi import HTTPException, FastAPI
+from fastapi import HTTPException, FastAPI, Depends
 
 from sqlalchemy.orm import Session
 import fastapi
+from starlette import status
 from starlette.responses import JSONResponse
-
+from settings import oauth2_scheme
 import auth
 import crud
 import database
@@ -27,14 +29,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @app.exception_handler(RequestValidationError)
@@ -60,7 +54,7 @@ async def root():
 
 
 @app.post("/signup/", status_code=201, response_model=schemas.UserOut)
-async def create(user: schemas.UserCreate, db: Session = fastapi.Depends(get_db)):
+async def create(user: schemas.UserCreate, db: Session = fastapi.Depends(database.get_db)):
     try:
         return crud.create_user(db, user)
     except SQLAlchemyError as e:
@@ -70,7 +64,7 @@ async def create(user: schemas.UserCreate, db: Session = fastapi.Depends(get_db)
 
 
 @app.post("/users/{identifier}", response_model=schemas.UserOut)
-async def get_user(identifier: Union[uuid.UUID, str], db: Session = fastapi.Depends(get_db)):
+async def get_user(identifier: Union[uuid.UUID, str], db: Session = fastapi.Depends(database.get_db)):
     if isinstance(identifier, uuid.UUID):
         db_user = crud.get_user_by_id(db, id=identifier)
     else:
@@ -82,14 +76,18 @@ async def get_user(identifier: Union[uuid.UUID, str], db: Session = fastapi.Depe
 
 
 @app.post("/login")
-async def login(user: schemas.UserLogin, db: Session = fastapi.Depends(get_db)):
-    user = auth.authenticate_user(db, email=user.email, password=user.password)
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+    user = auth.authenticate_user(db, username=form_data.username, password=form_data.password)
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     token = auth.create_access_token(data={"sub": user.email})
-    return "Success", schemas.UserLoginSuccess(username=user.username, email=user.email, access_token=token)
+    return {"access_token": token, "token_type": "bearer"}
 
 
-@app.get("/users/me")
-async def me():
-    return "signed in"
+@app.get("/users/me/", response_model=schemas.UserOut)
+async def read_users_me(current_user: schemas.UserOut = Depends(auth.get_current_user)):
+    return current_user

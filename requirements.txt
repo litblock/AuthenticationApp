@@ -10,3 +10,4 @@ pydantic~=1.10.17
 python-dotenv~=1.0.1
 passlib~=1.7.4
 jose~=1.0.0
+starlette~=0.35.1

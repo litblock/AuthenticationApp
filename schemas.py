@@ -35,7 +35,7 @@ class UserOut(BaseModel):
 
 
 class UserLogin(BaseModel):
-    email: str
+    username: str
     password: str
 
 
@@ -43,3 +43,13 @@ class UserLoginSuccess(BaseModel):
     username: str
     email: str
     access_token: str
+    token_type: str = "bearer"
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: str | None = None

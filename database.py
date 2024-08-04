@@ -30,3 +30,10 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     date_created = Column(DateTime, default=func.now())
 
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

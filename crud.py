@@ -1,13 +1,13 @@
 
-
 from sqlalchemy.orm import Session
+
 import database
 from passlib.context import CryptContext
 import schemas
 import uuid
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def get_user_by_id(session: Session, id: uuid.UUID):
@@ -33,5 +33,3 @@ def create_user(session: Session, user: schemas.UserCreate):
     session.commit()
     session.refresh(db_user)
     return db_user
-
-
