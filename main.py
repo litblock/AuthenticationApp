@@ -4,7 +4,6 @@ from urllib.request import Request
 
 from fastapi.exceptions import RequestValidationError
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import Uuid
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from fastapi import HTTPException, FastAPI, Depends
 
@@ -12,14 +11,11 @@ from sqlalchemy.orm import Session
 import fastapi
 from starlette import status
 from starlette.responses import JSONResponse
-from settings import oauth2_scheme
 import auth
 import crud
 import database
 import schemas
-from database import SessionLocal, engine, Base
-from settings import KEY
-from typing import Union
+from typing import Union, Annotated
 
 
 @asynccontextmanager
@@ -84,10 +80,12 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    token = auth.create_access_token(data={"sub": user.email})
-    return {"access_token": token, "token_type": "bearer"}
+    token = auth.create_access_token(data={"sub": user.username})
+    return schemas.Token(access_token=token, token_type="bearer")
 
 
 @app.get("/users/me/", response_model=schemas.UserOut)
-async def read_users_me(current_user: schemas.UserOut = Depends(auth.get_current_user)):
+async def read_users_me(
+        current_user: Annotated[database.User, Depends(auth.get_current_active_user)],
+):
     return current_user

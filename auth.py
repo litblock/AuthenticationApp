@@ -1,4 +1,5 @@
 from datetime import timedelta, datetime
+from typing import Annotated
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -6,7 +7,7 @@ from starlette import status
 
 import schemas
 from crud import get_user_by_email, pwd_context, get_user_by_username
-from database import get_db
+from database import get_db, User
 from settings import KEY, oauth2_scheme
 from jose import JWTError, jwt
 
@@ -61,3 +62,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     if user is None:
         raise credentials_exception
     return user
+
+
+async def get_current_active_user(
+        current_user: Annotated[User, Depends(get_current_user)],
+):
+    if not current_user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
